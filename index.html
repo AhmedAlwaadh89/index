@@ -157,13 +157,75 @@ textarea{resize:none;height:70px;line-height:1.5}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .spin{animation:sp 1s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
-</style>
+
+/* ─── LOGIN SCREEN ─── */
+.login-screen{position:fixed;inset:0;background:var(--dark);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo-icon{font-size:52px;color:var(--gold);display:block;margin-bottom:10px}
+.login-logo-name{font-size:24px;font-weight:700;color:var(--gold);letter-spacing:1px}
+.login-logo-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.login-card{background:var(--surface2);border:1px solid rgba(201,168,76,.2);border-radius:var(--radius);padding:20px;width:100%;max-width:340px}
+.login-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:16px;text-align:center}
+.login-error{font-size:12px;color:#EF9A9A;text-align:center;margin-top:10px;min-height:18px}
+.login-footer{font-size:11px;color:var(--text-hint);text-align:center;margin-top:16px}
+
+/* ─── ADMIN LOCK ─── */
+.admin-lock-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)}
+.admin-lock-card{background:var(--surface2);border:1px solid rgba(201,168,76,.3);border-radius:var(--radius);padding:20px;width:100%;max-width:300px}
+.admin-lock-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.admin-lock-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px}
+.admin-lock-error{font-size:11px;color:#EF9A9A;margin-top:8px;text-align:center;min-height:16px}
+.tap-hint{font-size:10px;color:var(--text-hint);text-align:center;margin-top:8px;opacity:.6}
+
 </head>
 <body>
 
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">
+    <i class="ti ti-bulb login-logo-icon"></i>
+    <div class="login-logo-name">مواسم للإنارة</div>
+    <div class="login-logo-sub">نظام المندوب الميداني</div>
+  </div>
+  <div class="login-card">
+    <div class="login-title"><i class="ti ti-user" style="font-size:16px"></i> تسجيل الدخول</div>
+    <div class="fg">
+      <label>اسمك الكامل</label>
+      <input type="text" id="loginName" placeholder="أدخل اسمك..." autocomplete="off" autocapitalize="words" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-submit" onclick="doLogin()" style="margin-top:4px">
+      <i class="ti ti-arrow-left"></i>دخول
+    </button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+  <div class="login-footer">مواسم للإنارة © 2025</div>
+</div>
+
+<!-- ══════════ ADMIN LOCK OVERLAY ══════════ -->
+<div class="admin-lock-overlay" id="adminLockOverlay" style="display:none">
+  <div class="admin-lock-card">
+    <div class="admin-lock-title"><i class="ti ti-shield-lock"></i>صلاحية المدير</div>
+    <div class="admin-lock-sub">هذا القسم مخصص للمدير فقط</div>
+    <div class="fg">
+      <label>كلمة السر</label>
+      <input type="password" id="adminPassInput" placeholder="أدخل كلمة السر..." onkeydown="if(event.key==='Enter')checkAdminPass()">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-submit" onclick="checkAdminPass()" style="flex:1;padding:11px;font-size:14px">
+        <i class="ti ti-check"></i>تأكيد
+      </button>
+      <button onclick="closeAdminLock()" style="background:rgba(201,168,76,.08);color:var(--gold);border:1px solid rgba(201,168,76,.25);border-radius:var(--radius-sm);font-family:'Tajawal',sans-serif;font-weight:600;cursor:pointer;flex:1;padding:11px;font-size:14px">
+        إلغاء
+      </button>
+    </div>
+    <div class="admin-lock-error" id="adminPassError"></div>
+    <div class="tap-hint">تلميح: اضغط على اسم الشركة 5 مرات متتالية للوصول</div>
+  </div>
+</div>
+
 <div class="header">
   <div>
-    <div class="logo-text">مواسم للإنارة</div>
+    <div class="logo-text" id="logoTapZone" onclick="onLogoTap()" style="cursor:default;user-select:none">مواسم للإنارة</div>
     <div class="logo-sub">نظام المندوب الميداني v3.0</div>
   </div>
   <div class="online-pill pill-off" id="statusPill">
@@ -180,7 +242,7 @@ textarea{resize:none;height:70px;line-height:1.5}
     <i class="ti ti-cloud-upload"></i>الطابور
     <span class="badge-tab" id="pendingBadge" style="display:none">0</span>
   </div>
-  <div class="tab" onclick="goTab('settings')" id="tab-settings">
+  <div class="tab" onclick="goTab('settings')" id="tab-settings" style="display:none">
     <i class="ti ti-adjustments-horizontal"></i>الإعدادات
   </div>
 </div>
@@ -971,8 +1033,77 @@ function toast(msg){
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function escJs(s){return s.replace(/'/g,"\\'").replace(/"/g,'&quot;')}
 
+/* ══════ LOGIN & ADMIN LOCK ══════ */
+var ADMIN_PASS = 'mawasim2025'; // ← غيّر كلمة السر من هنا
+var logoTapCount = 0;
+var logoTapTimer = null;
+var isAdmin = false;
+
+function doLogin(){
+  var name = document.getElementById('loginName').value.trim();
+  if(!name || name.length < 2){
+    document.getElementById('loginError').textContent = 'يرجى إدخال اسمك الكامل';
+    return;
+  }
+  localStorage.setItem('mw_agent', name);
+  document.getElementById('loginScreen').style.display = 'none';
+  loadSettings();
+  toast('أهلاً ' + name + ' 👋');
+}
+
+function onLogoTap(){
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  if(logoTapCount >= 5){
+    logoTapCount = 0;
+    openAdminLock();
+    return;
+  }
+  logoTapTimer = setTimeout(function(){ logoTapCount = 0; }, 2000);
+}
+
+function openAdminLock(){
+  document.getElementById('adminLockOverlay').style.display = 'flex';
+  document.getElementById('adminPassInput').value = '';
+  document.getElementById('adminPassError').textContent = '';
+  setTimeout(function(){ document.getElementById('adminPassInput').focus(); }, 100);
+}
+
+function closeAdminLock(){
+  document.getElementById('adminLockOverlay').style.display = 'none';
+}
+
+function checkAdminPass(){
+  var entered = document.getElementById('adminPassInput').value;
+  if(entered === ADMIN_PASS){
+    isAdmin = true;
+    sessionStorage.setItem('mw_admin','1');
+    document.getElementById('tab-settings').style.display = '';
+    closeAdminLock();
+    goTab('settings');
+    toast('✓ مرحباً بك في لوحة الإدارة');
+  } else {
+    document.getElementById('adminPassError').textContent = 'كلمة السر غير صحيحة';
+    document.getElementById('adminPassInput').value = '';
+    document.getElementById('adminPassInput').focus();
+  }
+}
+
+function checkLoginState(){
+  var saved = localStorage.getItem('mw_agent');
+  if(saved && saved.length >= 2){
+    document.getElementById('loginScreen').style.display = 'none';
+  }
+  // إذا كان الأدمن سبق فتح الإعدادات في نفس الجلسة
+  if(sessionStorage.getItem('mw_admin') === '1'){
+    isAdmin = true;
+    document.getElementById('tab-settings').style.display = '';
+  }
+}
+
 /* ══════ BOOT ══════ */
 openDB().then(function(){
+  checkLoginState();
   updateNet();
   loadSettings();
   refreshBadge();
