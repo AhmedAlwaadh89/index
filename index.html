@@ -1,22 +1,492 @@
-// ═══════════════════════════════════════════
-// مواسم للإنارة — Apps Script Backend v4
-// ═══════════════════════════════════════════
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1A1208">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مواسم - ميداني">
+<title>مواسم للإنارة - المندوب الميداني</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#C9A84C;--gold-light:#F0D080;--gold-dim:#8A6A20;
+  --dark:#141008;--surface:#1E1608;--surface2:#2A1F0D;--surface3:#352912;
+  --text:#F5EDD6;--text-muted:#8A7250;--text-hint:#5A4A30;
+  --green:#4CAF50;--red:#E53935;--amber:#FF8F00;
+  --radius:14px;--radius-sm:9px;--radius-xs:6px;
+  --shadow:0 4px 20px rgba(0,0,0,0.4);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--dark)}
+body{font-family:'Tajawal',sans-serif;color:var(--text);display:flex;flex-direction:column}
+
+.header{background:var(--surface);border-bottom:1px solid rgba(201,168,76,.2);padding:calc(12px + var(--safe-top)) 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:20}
+.logo-text{font-size:17px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+.logo-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.online-pill{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:500;transition:all .3s}
+.pill-on{background:rgba(76,175,80,.12);color:#81C784;border:1px solid rgba(76,175,80,.25)}
+.pill-off{background:rgba(229,57,53,.12);color:#EF9A9A;border:1px solid rgba(229,57,53,.25)}
+.dot{width:6px;height:6px;border-radius:50%}
+.dot-on{background:#4CAF50;animation:pulse 2s infinite}
+.dot-off{background:#E53935}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid rgba(201,168,76,.15);flex-shrink:0}
+.tab{flex:1;padding:10px 6px;text-align:center;font-size:11px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab i{display:block;font-size:20px;margin-bottom:2px}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);background:rgba(201,168,76,.05)}
+.badge-tab{display:inline-block;background:var(--amber);color:#1A1208;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;margin-right:2px;vertical-align:top;margin-top:-2px}
+
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.page{display:none;padding:14px 14px calc(14px + var(--safe-bottom))}
+.page.active{display:block}
+
+.card{background:var(--surface2);border:1px solid rgba(201,168,76,.15);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.card-title i{font-size:17px}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg{margin-bottom:11px}
+.fg:last-child{margin-bottom:0}
+label{display:block;font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:500}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid rgba(201,168,76,.2);border-radius:var(--radius-sm);padding:11px 12px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px;outline:none;transition:border .2s;direction:rtl;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);background:var(--surface3)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A7250' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 12px center;padding-left:32px}
+select option{background:var(--surface2)}
+textarea{resize:none;height:70px;line-height:1.5}
+::placeholder{color:var(--text-hint)}
+
+/* ─── CAMERA ZONE ─── */
+.camera-zone{border:2px dashed rgba(201,168,76,.3);border-radius:var(--radius);padding:0;overflow:hidden;cursor:pointer;position:relative;transition:border-color .2s;background:var(--surface)}
+.camera-zone.has-photo{border-style:solid;border-color:rgba(201,168,76,.5)}
+.camera-placeholder{padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.camera-placeholder i{font-size:40px;color:var(--gold);opacity:.6}
+.camera-placeholder .cp-title{font-size:14px;font-weight:600;color:var(--gold)}
+.camera-placeholder .cp-sub{font-size:11px;color:var(--text-muted);line-height:1.5}
+.photo-preview{width:100%;max-height:220px;object-fit:cover;display:block}
+.photo-overlay{position:absolute;bottom:0;left:0;right:0;padding:8px 12px;background:linear-gradient(transparent,rgba(0,0,0,.7));display:flex;align-items:center;justify-content:space-between}
+.photo-gps-tag{font-size:10px;color:#A5D6A7;display:flex;align-items:center;gap:4px}
+.photo-retake{font-size:11px;color:var(--gold);background:rgba(0,0,0,.5);border:1px solid rgba(201,168,76,.4);border-radius:var(--radius-xs);padding:4px 10px;cursor:pointer;font-family:'Tajawal',sans-serif;font-weight:600}
+.camera-required{font-size:10px;color:#EF9A9A;margin-top:6px;display:flex;align-items:center;gap:4px}
+
+/* ─── GPS STATUS ─── */
+.gps-status-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:var(--radius-sm);font-size:12px;margin-bottom:11px;transition:all .3s}
+.gps-waiting{background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.2);color:var(--text-muted)}
+.gps-loading{background:rgba(255,143,0,.07);border:1px solid rgba(255,143,0,.2);color:#FFCC80}
+.gps-ok{background:rgba(76,175,80,.07);border:1px solid rgba(76,175,80,.2);color:#A5D6A7}
+.gps-err{background:rgba(229,57,53,.07);border:1px solid rgba(229,57,53,.2);color:#EF9A9A}
+.gps-status-bar i{font-size:16px;flex-shrink:0}
+
+/* ─── CUSTOMER SECTION ─── */
+.customer-section{margin-top:4px}
+.search-wrap{position:relative}
+.search-wrap input{padding-right:36px}
+.search-icon{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:17px;pointer-events:none}
+.customer-dropdown{background:var(--surface3);border:1px solid rgba(201,168,76,.25);border-radius:var(--radius-sm);max-height:160px;overflow-y:auto;margin-top:4px;display:none}
+.cust-item{padding:10px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid rgba(201,168,76,.1);display:flex;align-items:center;gap:8px;transition:background .15s}
+.cust-item:last-child{border-bottom:none}
+.cust-item:hover,.cust-item:active{background:rgba(201,168,76,.08)}
+.cust-item i{font-size:15px;color:var(--text-muted);flex-shrink:0}
+.cust-name{font-weight:500}
+.cust-meta{font-size:10px;color:var(--text-muted);margin-top:1px}
+.selected-customer{display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:var(--radius-sm);margin-top:4px}
+.sc-name{flex:1;font-size:13px;font-weight:600;color:var(--gold-light)}
+.sc-clear{color:var(--text-muted);font-size:16px;cursor:pointer;padding:2px}
+.new-customer-fields{margin-top:10px;padding-top:10px;border-top:1px solid rgba(201,168,76,.12)}
+.nc-label{font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+
+/* ─── BUTTONS ─── */
+.btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,#B8922A,var(--gold),#E8C060);border:none;border-radius:var(--radius-sm);font-family:'Tajawal',sans-serif;font-size:16px;font-weight:700;color:#1A1208;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:all .2s;box-shadow:0 4px 16px rgba(201,168,76,.25);margin-top:4px}
+.btn-submit:active{transform:scale(.98)}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-sync{width:100%;padding:12px;background:rgba(76,175,80,.1);color:#81C784;border:1px solid rgba(76,175,80,.25);border-radius:var(--radius-sm);font-family:'Tajawal',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:12px;transition:all .2s}
+.btn-sync:disabled{opacity:.45;cursor:not-allowed}
+.btn-copy{background:rgba(201,168,76,.08);color:var(--gold);border:1px solid rgba(201,168,76,.25);border-radius:var(--radius-xs);padding:8px 14px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s}
+.btn-danger{width:100%;padding:11px;background:rgba(229,57,53,.08);color:#EF9A9A;border:1px solid rgba(229,57,53,.2);border-radius:var(--radius-sm);font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s}
+
+/* ─── STATS & QUEUE ─── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px}
+.stat{background:var(--surface2);border:1px solid rgba(201,168,76,.15);border-radius:var(--radius-sm);padding:12px 8px;text-align:center}
+.stat-n{font-size:26px;font-weight:700;line-height:1;color:var(--gold)}
+.stat-n.amber{color:var(--amber)}
+.stat-n.green{color:#81C784}
+.stat-l{font-size:10px;color:var(--text-muted);margin-top:3px}
+.qi{background:var(--surface2);border:1px solid rgba(201,168,76,.12);border-radius:var(--radius-sm);padding:11px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px}
+.qi-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ic-pending{background:rgba(255,143,0,.12);color:var(--amber)}
+.ic-synced{background:rgba(76,175,80,.12);color:#81C784}
+.ic-uploading{background:rgba(33,150,243,.12);color:#64B5F6}
+.qi-body{flex:1;min-width:0}
+.qi-shop{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qi-meta{font-size:10px;color:var(--text-muted);margin-top:2px}
+.qi-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid rgba(201,168,76,.2);flex-shrink:0}
+.qi-tag{font-size:10px;padding:2px 8px;border-radius:8px;flex-shrink:0}
+.tag-p{background:rgba(255,143,0,.12);color:var(--amber)}
+.tag-s{background:rgba(76,175,80,.12);color:#81C784}
+.tag-u{background:rgba(33,150,243,.12);color:#64B5F6}
+
+/* ─── ALERTS ─── */
+.alert{padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:11px;font-size:12px;display:flex;align-items:flex-start;gap:7px;line-height:1.5}
+.al-info{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);color:var(--gold-light)}
+.al-ok{background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.2);color:#A5D6A7}
+.al-warn{background:rgba(255,143,0,.08);border:1px solid rgba(255,143,0,.2);color:#FFCC80}
+.alert i{font-size:16px;flex-shrink:0;margin-top:1px}
+
+.code-box{background:var(--dark);border:1px solid rgba(201,168,76,.15);border-radius:var(--radius-sm);padding:12px;font-family:monospace;font-size:10.5px;color:#A5D6A7;line-height:1.65;white-space:pre;overflow-x:auto;margin-bottom:10px;direction:ltr;text-align:left}
+.section-title{font-size:11px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px;display:flex;align-items:center;gap:6px}
+.empty{text-align:center;padding:32px 16px;color:var(--text-muted)}
+.empty i{font-size:44px;margin-bottom:10px;display:block;opacity:.4}
+.empty p{font-size:13px;line-height:1.7;opacity:.7}
+.page-header{text-align:center;padding:10px 0 16px}
+.page-header h2{font-size:20px;font-weight:700;color:var(--gold)}
+.page-header p{font-size:11px;color:var(--text-muted);margin-top:3px}
+.progress-wrap{margin-bottom:12px}
+.progress-label{font-size:11px;color:var(--text-muted);margin-bottom:5px;display:flex;justify-content:space-between}
+.progress-bar{height:5px;background:rgba(201,168,76,.12);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:3px;transition:width .5s}
+.install-banner{background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.06));border:1px solid rgba(201,168,76,.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.ib-text{flex:1;font-size:12px;color:var(--gold-light);line-height:1.5}
+.ib-btn{background:var(--gold);color:#1A1208;border:none;border-radius:var(--radius-xs);padding:8px 12px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.toast{position:fixed;bottom:calc(72px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface3);color:var(--text);padding:11px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);border:1px solid rgba(201,168,76,.25);white-space:nowrap;max-width:88vw;box-shadow:var(--shadow);pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.spin{animation:sp 1s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ─── LOGIN SCREEN ─── */
+.login-screen{position:fixed;inset:0;background:var(--dark);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo-icon{font-size:52px;color:var(--gold);display:block;margin-bottom:10px}
+.login-logo-name{font-size:24px;font-weight:700;color:var(--gold);letter-spacing:1px}
+.login-logo-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.login-card{background:var(--surface2);border:1px solid rgba(201,168,76,.2);border-radius:var(--radius);padding:20px;width:100%;max-width:340px}
+.login-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:16px;text-align:center}
+.login-error{font-size:12px;color:#EF9A9A;text-align:center;margin-top:10px;min-height:18px}
+.login-footer{font-size:11px;color:var(--text-hint);text-align:center;margin-top:16px}
+
+/* ─── ADMIN LOCK ─── */
+.admin-lock-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)}
+.admin-lock-card{background:var(--surface2);border:1px solid rgba(201,168,76,.3);border-radius:var(--radius);padding:20px;width:100%;max-width:300px}
+.admin-lock-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.admin-lock-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px}
+.admin-lock-error{font-size:11px;color:#EF9A9A;margin-top:8px;text-align:center;min-height:16px}
+.tap-hint{font-size:10px;color:var(--text-hint);text-align:center;margin-top:8px;opacity:.6}
+
+</head>
+<body>
+
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">
+    <i class="ti ti-bulb login-logo-icon"></i>
+    <div class="login-logo-name">مواسم للإنارة</div>
+    <div class="login-logo-sub">نظام المندوب الميداني</div>
+  </div>
+  <div class="login-card">
+    <div class="login-title"><i class="ti ti-user" style="font-size:16px"></i> تسجيل الدخول</div>
+    <div class="fg">
+      <label>اسمك الكامل</label>
+      <input type="text" id="loginName" placeholder="أدخل اسمك..." autocomplete="off" autocapitalize="words" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-submit" onclick="doLogin()" style="margin-top:4px">
+      <i class="ti ti-arrow-left"></i>دخول
+    </button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+  <div class="login-footer">مواسم للإنارة © 2025</div>
+</div>
+
+<!-- ══════════ ADMIN LOCK OVERLAY ══════════ -->
+<div class="admin-lock-overlay" id="adminLockOverlay" style="display:none">
+  <div class="admin-lock-card">
+    <div class="admin-lock-title"><i class="ti ti-shield-lock"></i>صلاحية المدير</div>
+    <div class="admin-lock-sub">هذا القسم مخصص للمدير فقط</div>
+    <div class="fg">
+      <label>كلمة السر</label>
+      <input type="password" id="adminPassInput" placeholder="أدخل كلمة السر..." onkeydown="if(event.key==='Enter')checkAdminPass()">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-submit" onclick="checkAdminPass()" style="flex:1;padding:11px;font-size:14px">
+        <i class="ti ti-check"></i>تأكيد
+      </button>
+      <button onclick="closeAdminLock()" style="background:rgba(201,168,76,.08);color:var(--gold);border:1px solid rgba(201,168,76,.25);border-radius:var(--radius-sm);font-family:'Tajawal',sans-serif;font-weight:600;cursor:pointer;flex:1;padding:11px;font-size:14px">
+        إلغاء
+      </button>
+    </div>
+    <div class="admin-lock-error" id="adminPassError"></div>
+    <div class="tap-hint">تلميح: اضغط على اسم الشركة 5 مرات متتالية للوصول</div>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <div class="logo-text" id="logoTapZone" onclick="onLogoTap()" style="cursor:default;user-select:none">مواسم للإنارة</div>
+    <div class="logo-sub">نظام المندوب الميداني v3.0</div>
+  </div>
+  <div class="online-pill pill-off" id="statusPill">
+    <div class="dot dot-off" id="statusDot"></div>
+    <span id="statusTxt">غير متصل</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="goTab('visit')" id="tab-visit">
+    <i class="ti ti-clipboard-plus"></i>تسجيل
+  </div>
+  <div class="tab" onclick="goTab('queue')" id="tab-queue">
+    <i class="ti ti-cloud-upload"></i>الطابور
+    <span class="badge-tab" id="pendingBadge" style="display:none">0</span>
+  </div>
+  <div class="tab" onclick="goTab('settings')" id="tab-settings" style="display:none">
+    <i class="ti ti-adjustments-horizontal"></i>الإعدادات
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ══════════ VISIT PAGE ══════════ -->
+  <div class="page active" id="page-visit">
+    <div class="page-header">
+      <h2>تسجيل زيارة ميدانية</h2>
+      <p>تُحفظ فوراً حتى بدون إنترنت</p>
+    </div>
+
+    <!-- الصورة الإلزامية + GPS تلقائي -->
+    <div class="card">
+      <div class="card-title"><i class="ti ti-camera"></i>صورة المحل <span style="color:#EF9A9A;font-size:11px;font-weight:400;margin-right:4px">* إلزامي</span></div>
+
+      <div class="gps-status-bar gps-waiting" id="gpsBar">
+        <i class="ti ti-map-pin"></i>
+        <span id="gpsTxt">سيُحدَّد الموقع تلقائياً عند التقاط الصورة</span>
+      </div>
+
+      <div class="camera-zone" id="cameraZone" onclick="triggerCamera()">
+        <div class="camera-placeholder" id="cameraPlaceholder">
+          <i class="ti ti-camera"></i>
+          <div class="cp-title">اضغط لالتقاط صورة</div>
+          <div class="cp-sub">يُشترط التقاط صورة للمحل<br>سيُحدَّد موقعك تلقائياً مع الصورة</div>
+        </div>
+        <img id="photoPreview" class="photo-preview" style="display:none" alt="صورة المحل">
+        <div class="photo-overlay" id="photoOverlay" style="display:none">
+          <div class="photo-gps-tag"><i class="ti ti-map-pin" style="font-size:12px"></i><span id="gpsTagTxt"></span></div>
+          <button class="photo-retake" onclick="retakePhoto(event)"><i class="ti ti-refresh" style="font-size:12px"></i> إعادة</button>
+        </div>
+      </div>
+      <div class="camera-required" id="photoRequired" style="display:none">
+        <i class="ti ti-alert-circle" style="font-size:13px"></i>يرجى التقاط صورة للمحل للمتابعة
+      </div>
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="onPhotoChosen(event)">
+    </div>
+
+    <!-- بيانات المحل -->
+    <div class="card">
+      <div class="card-title"><i class="ti ti-building-store"></i>بيانات المحل</div>
+      <div class="fg">
+        <label>اسم المحل *</label>
+        <input type="text" id="shopName" placeholder="اسم المحل التجاري" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <div class="fg">
+          <label>المحافظة *</label>
+          <select id="governorate">
+            <option value="">اختر...</option>
+            <option>بغداد</option><option>البصرة</option><option>أربيل</option>
+            <option>نينوى</option><option>النجف</option><option>كربلاء</option>
+            <option>السليمانية</option><option>ديالى</option><option>صلاح الدين</option>
+            <option>واسط</option><option>ذي قار</option><option>ميسان</option>
+            <option>المثنى</option><option>القادسية</option><option>بابل</option>
+            <option>الأنبار</option><option>كركوك</option><option>دهوك</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>المنطقة / الحي *</label>
+          <input type="text" id="area" placeholder="مثال: الكرادة" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <!-- تفاصيل الزيارة + العميل -->
+    <div class="card">
+      <div class="card-title"><i class="ti ti-activity"></i>تفاصيل الزيارة</div>
+      <div class="form-row">
+        <div class="fg">
+          <label>نوع الزيارة *</label>
+          <select id="visitType" onchange="onVisitTypeChange()">
+            <option value="عميل جديد">عميل جديد ✦</option>
+            <option value="زيارة دورية">زيارة دورية</option>
+            <option value="متابعة طلب">متابعة طلب</option>
+            <option value="تحصيل ديون">تحصيل ديون</option>
+            <option value="شكوى عميل">شكوى عميل</option>
+            <option value="عرض منتج">عرض منتج</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>حالة البضاعة *</label>
+          <select id="status">
+            <option value="مستقرة">مستقرة ✓</option>
+            <option value="تحتاج تعويض">تحتاج تعويض ⚠</option>
+            <option value="نقص في العرض">نقص في العرض ↓</option>
+            <option value="لا توجد بضاعة">لا توجد بضاعة ✗</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- قسم العميل — يتغير حسب نوع الزيارة -->
+      <div class="customer-section" id="customerSection">
+
+        <!-- عميل جديد: حقول التعريف -->
+        <div id="newCustomerBlock">
+          <div class="nc-label"><i class="ti ti-user-plus" style="font-size:14px"></i>بيانات العميل الجديد</div>
+          <div class="fg">
+            <label>اسم صاحب المحل</label>
+            <input type="text" id="custOwner" placeholder="اسم صاحب المحل أو المسؤول" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <div class="fg">
+              <label>رقم الهاتف</label>
+              <input type="tel" id="custPhone" placeholder="07xxxxxxxxx" dir="ltr">
+            </div>
+            <div class="fg">
+              <label>حجم المحل</label>
+              <select id="custSize">
+                <option value="">اختر...</option>
+                <option>صغير</option><option>متوسط</option><option>كبير</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg">
+            <label>تصنيف العميل</label>
+            <select id="custCategory">
+              <option value="">اختر...</option>
+              <option>محل كهربائيات</option>
+              <option>محل إنارة متخصص</option>
+              <option>مقاول ومعماري</option>
+              <option>سوبرماركت / هايبر</option>
+              <option>تجزئة عامة</option>
+              <option>مورد / جملة</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>ملاحظات العميل</label>
+            <textarea id="custNotes" placeholder="أي معلومات مفيدة عن العميل..."></textarea>
+          </div>
+        </div>
+
+        <!-- زيارة سابقة: بحث عن عميل موجود -->
+        <div id="existingCustomerBlock" style="display:none">
+          <div class="nc-label"><i class="ti ti-users" style="font-size:14px"></i>ربط بعميل موجود <span style="font-weight:400;color:var(--text-muted)">(اختياري)</span></div>
+          <div id="selectedCustomerWrap" style="display:none">
+            <div class="selected-customer">
+              <i class="ti ti-user-check" style="color:var(--gold);font-size:16px"></i>
+              <div class="sc-name" id="scName"></div>
+              <span class="sc-clear" onclick="clearSelectedCustomer()"><i class="ti ti-x"></i></span>
+            </div>
+          </div>
+          <div id="searchWrap">
+            <div class="search-wrap">
+              <input type="text" id="custSearch" placeholder="ابحث باسم المحل أو المنطقة..." autocomplete="off" oninput="searchCustomers()" onfocus="searchCustomers()">
+              <i class="ti ti-search search-icon"></i>
+            </div>
+            <div class="customer-dropdown" id="custDropdown"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:10px" class="fg">
+        <label>ملاحظات الزيارة</label>
+        <textarea id="notes" placeholder="أي ملاحظات إضافية عن هذه الزيارة..."></textarea>
+      </div>
+    </div>
+
+    <button class="btn-submit" onclick="doSave()" id="saveBtn">
+      <i class="ti ti-device-floppy"></i>حفظ الزيارة
+    </button>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- ══════════ QUEUE PAGE ══════════ -->
+  <div class="page" id="page-queue">
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-n" id="stTotal">0</div><div class="stat-l">إجمالي</div></div>
+      <div class="stat"><div class="stat-n amber" id="stPending">0</div><div class="stat-l">معلق</div></div>
+      <div class="stat"><div class="stat-n green" id="stSynced">0</div><div class="stat-l">مرفوع</div></div>
+    </div>
+    <div id="qAlert"></div>
+    <div id="progressWrap" style="display:none" class="progress-wrap">
+      <div class="progress-label"><span>جاري الرفع...</span><span id="progressTxt">0%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+    <button class="btn-sync" onclick="doSync()" id="syncBtn">
+      <i class="ti ti-cloud-upload"></i>رفع الزيارات إلى Google Sheets
+    </button>
+    <div class="section-title"><i class="ti ti-list"></i>سجل الزيارات</div>
+    <div id="qList"></div>
+  </div>
+
+  <!-- ══════════ SETTINGS PAGE ══════════ -->
+  <div class="page" id="page-settings">
+    <div class="install-banner" id="installBanner" style="display:none">
+      <i class="ti ti-device-mobile" style="font-size:24px;color:var(--gold);flex-shrink:0"></i>
+      <div class="ib-text">ثبّت كتطبيق على هاتفك للعمل بالكامل بدون إنترنت</div>
+      <button class="ib-btn" onclick="doInstall()">تثبيت</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-table"></i>ربط Google Sheets</div>
+      <div class="alert al-info">
+        <i class="ti ti-info-circle"></i>
+        <div>أدخل رابط Apps Script. التطبيق يعمل offline ويرفع الصور والبيانات تلقائياً عند الاتصال.</div>
+      </div>
+      <div class="fg">
+        <label>رابط Google Apps Script (Web App URL)</label>
+        <input type="url" id="cfgUrl" placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <div class="fg">
+        <label>اسم المندوب</label>
+        <input type="text" id="cfgAgent" placeholder="الاسم الكامل">
+      </div>
+      <button class="btn-submit" onclick="saveSettings()">
+        <i class="ti ti-check"></i>حفظ الإعدادات
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-code"></i>كود Apps Script الكامل</div>
+      <div class="alert al-warn">
+        <i class="ti ti-bulb"></i>
+        <div>
+          <strong>خطوات التفعيل:</strong><br>
+          1. افتح Havells_System في Google Sheets<br>
+          2. الإضافات ← برمجة التطبيقات<br>
+          3. الصق الكود أدناه<br>
+          4. انشر كـ Web App — Execute: Me / Access: Anyone<br>
+          5. انسخ الرابط والصقه فوق
+        </div>
+      </div>
+      <div class="code-box" id="codeBox">// ═══════════════════════════════════════
+// مواسم للإنارة — Apps Script Backend v3
+// ═══════════════════════════════════════
 
 var FOLDER_NAME = "مواسم - صور الزيارات";
 var SHEET_NAME  = "Havells_System";
 
-// ─── الدالة الرئيسية لاستقبال البيانات ───
 function doPost(e) {
   try {
     var params = JSON.parse(e.postData.contents);
 
     // رفع الصورة إلى Drive
     var photoUrl = "";
-    if (params.photoBase64 && params.photoBase64.length > 0) {
+    if (params.photoBase64) {
       photoUrl = uploadPhoto(
         params.photoBase64,
-        params.shopName || "محل",
-        params.localTime || new Date().toLocaleString()
+        params.shopName,
+        params.localTime
       );
     }
 
@@ -24,120 +494,638 @@ function doPost(e) {
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(SHEET_NAME) || ss.getActiveSheet();
 
-    // إضافة رؤوس الأعمدة إذا كان الشيت فارغاً
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "وقت الاستلام","المندوب","المحافظة","المنطقة","اسم المحل",
-        "نوع الزيارة","حالة البضاعة","الموقع GPS","الصورة","رابط الصورة",
-        "صاحب المحل","الهاتف","حجم المحل","التصنيف","العميل المرتبط",
-        "ملاحظات العميل","ملاحظات الزيارة","وقت الزيارة"
-      ]);
-    }
-
     sheet.appendRow([
-      new Date(),                          // A: وقت الاستلام
-      params.agent        || "",           // B: المندوب
-      params.governorate  || "",           // C: المحافظة
-      params.area         || "",           // D: المنطقة
-      params.shopName     || "",           // E: اسم المحل
-      params.visitType    || "",           // F: نوع الزيارة
-      params.status       || "",           // G: حالة البضاعة
-      params.gps          || "",           // H: الموقع
-      photoUrl ? '=IMAGE("' + photoUrl + '",4,60,80)' : "",  // I: صورة مصغرة
-      photoUrl            || "",           // J: رابط مباشر
-      params.custOwner    || "",           // K: صاحب المحل
-      params.custPhone    || "",           // L: الهاتف
-      params.custSize     || "",           // M: حجم المحل
-      params.custCategory || "",           // N: التصنيف
-      params.linkedCustomer|| "",          // O: العميل المرتبط
-      params.custNotes    || "",           // P: ملاحظات العميل
-      params.notes        || "",           // Q: ملاحظات الزيارة
-      params.localTime    || ""            // R: وقت الزيارة المحلي
+      new Date(),           // A: وقت الاستلام
+      params.agent,         // B: المندوب
+      params.governorate,   // C: المحافظة
+      params.area,          // D: المنطقة
+      params.shopName,      // E: اسم المحل
+      params.visitType,     // F: نوع الزيارة
+      params.status,        // G: حالة البضاعة
+      params.gps,           // H: الموقع
+      photoUrl              // I: رابط الصورة
+        ? '=IMAGE("' + photoUrl + '",4,60,80)'
+        : "",
+      photoUrl,             // J: رابط مباشر
+      params.custOwner    || "",  // K: صاحب المحل
+      params.custPhone    || "",  // L: الهاتف
+      params.custSize     || "",  // M: حجم المحل
+      params.custCategory || "",  // N: التصنيف
+      params.linkedCustomer|| "", // O: العميل المرتبط
+      params.custNotes    || "",  // P: ملاحظات العميل
+      params.notes        || "",  // Q: ملاحظات الزيارة
+      params.localTime          // R: الوقت المحلي
     ]);
 
-    return buildResponse({ success: true, photoUrl: photoUrl });
-
+    return ok({ photoUrl: photoUrl });
   } catch(err) {
-    return buildResponse({ success: false, error: err.message });
+    return ok({ error: err.message });
   }
 }
 
-// ─── رفع الصورة إلى Drive ───
 function uploadPhoto(base64, shopName, timeStr) {
   var folder = getOrCreateFolder(FOLDER_NAME);
-
-  // تنظيف اسم الملف من الرموز غير المسموحة
-  var safeName = (shopName + "_" + timeStr)
-    .replace(/[\/\\:*?"<>|]/g, "_")
-    .substring(0, 80);
-
-  var blob = Utilities.newBlob(
+  var blob   = Utilities.newBlob(
     Utilities.base64Decode(base64),
     "image/jpeg",
-    safeName + ".jpg"
+    shopName + "_" + timeStr + ".jpg"
   );
-
   var file = folder.createFile(blob);
   file.setSharing(
     DriveApp.Access.ANYONE_WITH_LINK,
     DriveApp.Permission.VIEW
   );
-
-  // رابط مباشر يعمل مع =IMAGE() في Sheets
-  return "https://drive.google.com/uc?export=view&id=" + file.getId();
+  // رابط مباشر للعرض في Sheets
+  return "https://drive.google.com/uc?id=" + file.getId();
 }
 
-// ─── الحصول على مجلد أو إنشاؤه ───
 function getOrCreateFolder(name) {
   var it = DriveApp.getFoldersByName(name);
   return it.hasNext() ? it.next() : DriveApp.createFolder(name);
 }
 
-// ─── بناء الرد مع CORS headers ───
-function buildResponse(data) {
-  var output = ContentService.createTextOutput(JSON.stringify(data));
-  output.setMimeType(ContentService.MimeType.JSON);
-  return output;
+function ok(data) {
+  data.success = !data.error;
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ─── جلب قائمة العملاء (GET) ───
+// ─── جلب قائمة العملاء ───────────────
 function doGet(e) {
-  var action = e && e.parameter ? e.parameter.action : "";
-
-  if (action === "customers") {
+  if (e.parameter.action === "customers") {
     return getCustomers();
   }
-
-  return buildResponse({ success: true, message: "Mawasim API v4 ready" });
+  return ok({ message: "Mawasim API ready" });
 }
 
 function getCustomers() {
-  try {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(SHEET_NAME) || ss.getActiveSheet();
-    var data  = sheet.getDataRange().getValues();
-    var customers = [];
-    var seen  = {};
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.getActiveSheet();
+  var data  = sheet.getDataRange().getValues();
+  var customers = [];
+  var seen  = {};
 
-    for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      if (row[5] !== "عميل جديد") continue;
-      var key = (row[4] || "") + "|" + (row[3] || "");
-      if (seen[key]) continue;
-      seen[key] = true;
-      customers.push({
-        shopName   : row[4]  || "",
-        area       : row[3]  || "",
-        governorate: row[2]  || "",
-        owner      : row[10] || "",
-        phone      : row[11] || "",
-        category   : row[13] || ""
-      });
-    }
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    // العمود F = نوع الزيارة (index 5)
+    if (row[5] !== "عميل جديد") continue;
+    var key = row[4] + "|" + row[3]; // shopName|area
+    if (seen[key]) continue;
+    seen[key] = true;
+    customers.push({
+      shopName   : row[4],  // E
+      area       : row[3],  // D
+      governorate: row[2],  // C
+      owner      : row[10], // K
+      phone      : row[11], // L
+      category   : row[13]  // N
+    });
+  }
 
-    return buildResponse({ success: true, customers: customers });
+  return ContentService
+    .createTextOutput(JSON.stringify({ customers: customers }))
+    .setMimeType(ContentService.MimeType.JSON);
+}</div>
+      <button class="btn-copy" onclick="copyCode()">
+        <i class="ti ti-copy"></i>نسخ الكود
+      </button>
+    </div>
 
-  } catch(err) {
-    return buildResponse({ success: false, error: err.message });
+    <div class="card">
+      <div class="card-title"><i class="ti ti-database"></i>إدارة البيانات</div>
+      <button class="btn-danger" onclick="clearSynced()">
+        <i class="ti ti-trash"></i>حذف الزيارات المرفوعة
+      </button>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════ IndexedDB ══════ */
+var DB='MawasimV3', STORE='visits', db=null;
+function openDB(){
+  return new Promise(function(res,rej){
+    var r=indexedDB.open(DB,1);
+    r.onupgradeneeded=function(e){
+      var d=e.target.result;
+      if(!d.objectStoreNames.contains(STORE))
+        d.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+    };
+    r.onsuccess=function(e){db=e.target.result;res()};
+    r.onerror=rej;
+  });
+}
+function dbAdd(rec){return new Promise(function(res,rej){var tx=db.transaction([STORE],'readwrite');tx.objectStore(STORE).add(rec).onsuccess=function(e){res(e.target.result)};tx.onerror=rej})}
+function dbAll(){return new Promise(function(res){var all=[];db.transaction([STORE],'readonly').objectStore(STORE).openCursor().onsuccess=function(e){var c=e.target.result;if(c){all.push(c.value);c.continue()}else res(all.reverse())}})}
+function dbUpdate(id,patch){return new Promise(function(res,rej){var tx=db.transaction([STORE],'readwrite');var st=tx.objectStore(STORE);var r=st.get(id);r.onsuccess=function(){var rec=Object.assign(r.result,patch);st.put(rec).onsuccess=res};tx.onerror=rej})}
+function dbDel(id){return new Promise(function(res,rej){var tx=db.transaction([STORE],'readwrite');tx.objectStore(STORE).delete(id).onsuccess=res;tx.onerror=rej})}
+
+/* ══════ STATE ══════ */
+var online=navigator.onLine;
+var capturedPhoto=null;    // base64 string (no prefix)
+var capturedGPS=null;      // "lat, lng"
+var selectedCustomer=null; // object or null
+var allCustomers=[];       // loaded from Sheets or local cache
+
+/* ══════ NETWORK ══════ */
+function updateNet(){
+  online=navigator.onLine;
+  var pill=document.getElementById('statusPill');
+  var dot=document.getElementById('statusDot');
+  var txt=document.getElementById('statusTxt');
+  if(online){
+    pill.className='online-pill pill-on';dot.className='dot dot-on';txt.textContent='متصل';
+    loadCustomersFromServer();
+    autoSync();
+  } else {
+    pill.className='online-pill pill-off';dot.className='dot dot-off';txt.textContent='غير متصل';
+    loadCustomersFromCache();
   }
 }
+window.addEventListener('online',updateNet);
+window.addEventListener('offline',updateNet);
+
+/* ══════ TABS ══════ */
+function goTab(t){
+  document.querySelectorAll('.tab').forEach(function(el){el.classList.remove('active')});
+  document.querySelectorAll('.page').forEach(function(el){el.classList.remove('active')});
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('page-'+t).classList.add('active');
+  if(t==='queue')refreshQueue();
+  if(t==='settings')loadSettings();
+}
+
+/* ══════ CAMERA + AUTO GPS ══════ */
+function triggerCamera(){
+  document.getElementById('cameraInput').click();
+}
+
+function retakePhoto(e){
+  e.stopPropagation();
+  capturedPhoto=null;
+  capturedGPS=null;
+  document.getElementById('photoPreview').style.display='none';
+  document.getElementById('photoOverlay').style.display='none';
+  document.getElementById('cameraPlaceholder').style.display='flex';
+  document.getElementById('gpsBar').className='gps-status-bar gps-waiting';
+  document.getElementById('gpsTxt').textContent='سيُحدَّد الموقع تلقائياً عند التقاط الصورة';
+  document.getElementById('cameraInput').value='';
+}
+
+function onPhotoChosen(evt){
+  var file=evt.target.files[0];
+  if(!file)return;
+  // ابدأ GPS فوراً بالتوازي مع قراءة الصورة
+  startGPSCapture();
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var dataUrl=e.target.result;
+    // اضغط الصورة
+    compressImage(dataUrl, function(compressed, base64){
+      capturedPhoto=base64;
+      document.getElementById('photoPreview').src=compressed;
+      document.getElementById('photoPreview').style.display='block';
+      document.getElementById('cameraPlaceholder').style.display='none';
+      document.getElementById('photoOverlay').style.display='flex';
+      document.getElementById('photoRequired').style.display='none';
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function compressImage(dataUrl, cb){
+  var img=new Image();
+  img.onload=function(){
+    var MAX=1200;
+    var w=img.width, h=img.height;
+    if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+    var canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    var compressed=canvas.toDataURL('image/jpeg',0.75);
+    var base64=compressed.split(',')[1];
+    cb(compressed, base64);
+  };
+  img.src=dataUrl;
+}
+
+function startGPSCapture(){
+  var bar=document.getElementById('gpsBar');
+  var txt=document.getElementById('gpsTxt');
+  bar.className='gps-status-bar gps-loading';
+  txt.textContent='جاري تحديد موقعك...';
+  if(!navigator.geolocation){
+    bar.className='gps-status-bar gps-err';
+    txt.textContent='الجهاز لا يدعم GPS — فعّل الموقع يدوياً';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    function(p){
+      var lat=p.coords.latitude.toFixed(6);
+      var lng=p.coords.longitude.toFixed(6);
+      capturedGPS=lat+', '+lng;
+      bar.className='gps-status-bar gps-ok';
+      txt.textContent='✓ تم تحديد الموقع: '+capturedGPS;
+      document.getElementById('gpsTagTxt').textContent=lat.substring(0,8)+', '+lng.substring(0,8);
+    },
+    function(err){
+      bar.className='gps-status-bar gps-err';
+      txt.textContent='تعذّر تحديد الموقع — فعّل خدمة الموقع في إعدادات هاتفك';
+    },
+    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );
+}
+
+/* ══════ VISIT TYPE TOGGLE ══════ */
+function onVisitTypeChange(){
+  var type=document.getElementById('visitType').value;
+  var isNew=(type==='عميل جديد');
+  document.getElementById('newCustomerBlock').style.display=isNew?'block':'none';
+  document.getElementById('existingCustomerBlock').style.display=isNew?'none':'block';
+  if(!isNew) populateCustomerDropdown('');
+}
+
+/* ══════ CUSTOMER SEARCH ══════ */
+function searchCustomers(){
+  var q=document.getElementById('custSearch').value.trim().toLowerCase();
+  populateCustomerDropdown(q);
+}
+
+function populateCustomerDropdown(q){
+  var dd=document.getElementById('custDropdown');
+  var filtered=allCustomers.filter(function(c){
+    return !q || (c.shopName||'').toLowerCase().includes(q) || (c.area||'').toLowerCase().includes(q);
+  });
+  if(!filtered.length){
+    dd.style.display='none'; return;
+  }
+  dd.style.display='block';
+  dd.innerHTML=filtered.slice(0,20).map(function(c,i){
+    return '<div class="cust-item" onclick="selectCustomer('+i+',\''+escJs(JSON.stringify(c))+'\')">'+
+      '<i class="ti ti-building-store"></i>'+
+      '<div><div class="cust-name">'+escHtml(c.shopName)+'</div>'+
+      '<div class="cust-meta">'+escHtml(c.area)+' — '+escHtml(c.governorate)+(c.owner?' | '+escHtml(c.owner):'')+'</div></div>'+
+      '</div>';
+  }).join('');
+}
+
+function selectCustomer(i, jsonStr){
+  selectedCustomer=JSON.parse(jsonStr);
+  document.getElementById('scName').textContent=selectedCustomer.shopName+' — '+selectedCustomer.area;
+  document.getElementById('selectedCustomerWrap').style.display='block';
+  document.getElementById('searchWrap').style.display='none';
+  document.getElementById('custDropdown').style.display='none';
+}
+
+function clearSelectedCustomer(){
+  selectedCustomer=null;
+  document.getElementById('selectedCustomerWrap').style.display='none';
+  document.getElementById('searchWrap').style.display='block';
+  document.getElementById('custSearch').value='';
+}
+
+/* ══════ CUSTOMERS FROM SERVER / CACHE ══════ */
+function loadCustomersFromServer(){
+  var cfg=getConfig();
+  if(!cfg.url) return;
+  fetch(cfg.url+'?action=customers')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data.customers){
+        allCustomers=data.customers;
+        localStorage.setItem('mw_customers',JSON.stringify(allCustomers));
+      }
+    })
+    .catch(function(){loadCustomersFromCache()});
+}
+
+function loadCustomersFromCache(){
+  var cached=localStorage.getItem('mw_customers');
+  if(cached){ try{allCustomers=JSON.parse(cached)}catch(e){} }
+  // أيضاً ابنِ من السجلات المحلية
+  dbAll().then(function(recs){
+    recs.filter(function(r){return r.visitType==='عميل جديد'}).forEach(function(r){
+      var exists=allCustomers.some(function(c){return c.shopName===r.shopName&&c.area===r.area});
+      if(!exists) allCustomers.push({shopName:r.shopName,area:r.area,governorate:r.governorate,owner:r.custOwner||'',phone:r.custPhone||''});
+    });
+  });
+}
+
+/* ══════ SAVE VISIT ══════ */
+function doSave(){
+  if(!capturedPhoto){
+    document.getElementById('photoRequired').style.display='flex';
+    document.getElementById('cameraZone').scrollIntoView({behavior:'smooth'});
+    toast('⚠ يرجى التقاط صورة للمحل');
+    return;
+  }
+  var shop=document.getElementById('shopName').value.trim();
+  var gov=document.getElementById('governorate').value;
+  var area=document.getElementById('area').value.trim();
+  if(!shop||!gov||!area){toast('⚠ أدخل اسم المحل والمحافظة والمنطقة');return}
+  if(!capturedGPS){toast('⚠ جاري تحديد الموقع، انتظر لحظة...');return}
+
+  var cfg=getConfig();
+  var type=document.getElementById('visitType').value;
+  var isNew=(type==='عميل جديد');
+  var now=new Date();
+
+  var rec={
+    agent:cfg.agent||'غير محدد',
+    governorate:gov, area:area, shopName:shop,
+    visitType:type,
+    status:document.getElementById('status').value,
+    gps:capturedGPS,
+    photoBase64:capturedPhoto,
+    notes:document.getElementById('notes').value.trim(),
+    localTime:now.toLocaleString('ar-IQ'),
+    createdAt:now.toISOString(),
+    custOwner: isNew?document.getElementById('custOwner').value.trim():'',
+    custPhone: isNew?document.getElementById('custPhone').value.trim():'',
+    custSize:  isNew?document.getElementById('custSize').value:'',
+    custCategory:isNew?document.getElementById('custCategory').value:'',
+    custNotes: isNew?document.getElementById('custNotes').value.trim():'',
+    linkedCustomer:(!isNew&&selectedCustomer)?selectedCustomer.shopName:'',
+    synced:false
+  };
+
+  var btn=document.getElementById('saveBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin"><i class="ti ti-loader-2"></i></span> جاري الحفظ...';
+
+  dbAdd(rec).then(function(){
+    // إعادة ضبط الفورم
+    ['shopName','area','notes','custOwner','custPhone','custNotes'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.value='';
+    });
+    ['custSize','custCategory','governorate'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.value='';
+    });
+    capturedPhoto=null; capturedGPS=null; selectedCustomer=null;
+    document.getElementById('photoPreview').style.display='none';
+    document.getElementById('photoOverlay').style.display='none';
+    document.getElementById('cameraPlaceholder').style.display='flex';
+    document.getElementById('gpsBar').className='gps-status-bar gps-waiting';
+    document.getElementById('gpsTxt').textContent='سيُحدَّد الموقع تلقائياً عند التقاط الصورة';
+    document.getElementById('cameraInput').value='';
+    clearSelectedCustomer();
+    btn.disabled=false;
+    btn.innerHTML='<i class="ti ti-device-floppy"></i>حفظ الزيارة';
+    toast('✓ تم حفظ الزيارة محلياً');
+    refreshBadge();
+    loadCustomersFromCache();
+    if(online) autoSync();
+  }).catch(function(){
+    toast('✗ خطأ في الحفظ');
+    btn.disabled=false;
+    btn.innerHTML='<i class="ti ti-device-floppy"></i>حفظ الزيارة';
+  });
+}
+
+/* ══════ QUEUE ══════ */
+function refreshQueue(){
+  dbAll().then(function(recs){
+    var total=recs.length, pending=recs.filter(function(r){return !r.synced}).length;
+    document.getElementById('stTotal').textContent=total;
+    document.getElementById('stPending').textContent=pending;
+    document.getElementById('stSynced').textContent=total-pending;
+    var al=document.getElementById('qAlert');
+    if(!total){ al.innerHTML=''; }
+    else if(pending>0&&!online){ al.innerHTML='<div class="alert al-warn"><i class="ti ti-wifi-off"></i>'+pending+' زيارة معلقة — ستُرفع تلقائياً عند الاتصال</div>'; }
+    else if(pending>0){ al.innerHTML='<div class="alert al-info"><i class="ti ti-cloud"></i>'+pending+' زيارة جاهزة للرفع</div>'; }
+    else { al.innerHTML='<div class="alert al-ok"><i class="ti ti-circle-check"></i>جميع الزيارات مرفوعة بنجاح ✓</div>'; }
+    var list=document.getElementById('qList');
+    if(!recs.length){list.innerHTML='<div class="empty"><i class="ti ti-clipboard-off"></i><p>لا توجد زيارات بعد</p></div>';return}
+    list.innerHTML=recs.map(function(r){
+      var ic,icCls,tagCls,tagTxt;
+      if(r.synced){ic='<i class="ti ti-circle-check"></i>';icCls='ic-synced';tagCls='tag-s';tagTxt='مرفوع ✓'}
+      else{ic='<i class="ti ti-clock"></i>';icCls='ic-pending';tagCls='tag-p';tagTxt='معلق'}
+      var thumb=r.photoBase64?'<img class="qi-thumb" src="data:image/jpeg;base64,'+r.photoBase64.substring(0,20)+'..." onerror="this.style.display=\'none\'">':'';
+      // نستخدم thumbnail صغيرة فعلياً
+      var thumbHtml=r.photoBase64?'<img class="qi-thumb" src="data:image/jpeg;base64,'+r.photoBase64+'" alt="">':'';
+      return '<div class="qi">'+
+        '<div class="qi-icon '+icCls+'">'+ic+'</div>'+
+        '<div class="qi-body">'+
+          '<div class="qi-shop">'+escHtml(r.shopName)+'</div>'+
+          '<div class="qi-meta">'+escHtml(r.governorate)+' - '+escHtml(r.area)+' | '+escHtml(r.visitType)+'</div>'+
+          '<div class="qi-meta">'+escHtml(r.localTime||'')+'</div>'+
+        '</div>'+
+        thumbHtml+
+        '<span class="qi-tag '+tagCls+'">'+tagTxt+'</span>'+
+      '</div>';
+    }).join('');
+  });
+}
+
+function refreshBadge(){
+  dbAll().then(function(recs){
+    var p=recs.filter(function(r){return !r.synced}).length;
+    var b=document.getElementById('pendingBadge');
+    if(p>0){b.style.display='inline';b.textContent=p}else b.style.display='none';
+  });
+}
+
+/* ══════ SYNC ══════ */
+function doSync(){
+  var cfg=getConfig();
+  if(!cfg.url){toast('⚠ أدخل رابط Apps Script في الإعدادات');return}
+  if(!online){toast('⚠ لا يوجد اتصال بالإنترنت');return}
+  dbAll().then(function(recs){
+    var pending=recs.filter(function(r){return !r.synced});
+    if(!pending.length){toast('✓ لا توجد زيارات معلقة');return}
+    var btn=document.getElementById('syncBtn');
+    var pw=document.getElementById('progressWrap');
+    var pf=document.getElementById('progressFill');
+    var pt=document.getElementById('progressTxt');
+    btn.disabled=true; pw.style.display='block';
+    var done=0, total=pending.length;
+    function next(i){
+      if(i>=total){
+        btn.disabled=false; pw.style.display='none';
+        toast('✓ تم رفع '+done+' من '+total+' زيارة');
+        refreshQueue(); refreshBadge(); return;
+      }
+      var r=pending[i];
+      fetch(cfg.url,{method:'POST',body:JSON.stringify(r),headers:{'Content-Type':'text/plain'}})
+        .then(function(resp){
+          if(!resp.ok) throw new Error('HTTP '+resp.status);
+          return resp.json();
+        })
+        .then(function(data){
+          if(data.success){
+            done++;
+            return dbUpdate(r.id,{synced:true,driveUrl:data.photoUrl||''});
+          } else {
+            throw new Error(data.error||'فشل غير معروف');
+          }
+        })
+        .catch(function(err){
+          console.error('خطأ في رفع زيارة '+r.shopName+': '+err.message);
+          toast('✗ خطأ: '+err.message);
+        })
+        .finally(function(){
+          var pct=Math.round(((i+1)/total)*100);
+          pf.style.width=pct+'%'; pt.textContent=pct+'%';
+          next(i+1);
+        });
+    }
+    next(0);
+  });
+}
+
+function autoSync(){
+  var cfg=getConfig();
+  if(!cfg.url||!online)return;
+  dbAll().then(function(recs){
+    recs.filter(function(r){return !r.synced}).forEach(function(r){
+      fetch(cfg.url,{method:'POST',body:JSON.stringify(r),headers:{'Content-Type':'text/plain'}})
+        .then(function(resp){return resp.json()})
+        .then(function(data){return dbUpdate(r.id,{synced:true,driveUrl:data.photoUrl||''})})
+        .then(function(){refreshBadge()})
+        .catch(function(){});
+    });
+  });
+}
+
+/* ══════ SETTINGS ══════ */
+function saveSettings(){
+  localStorage.setItem('mw_url',document.getElementById('cfgUrl').value.trim());
+  localStorage.setItem('mw_agent',document.getElementById('cfgAgent').value.trim());
+  toast('✓ تم حفظ الإعدادات');
+}
+function loadSettings(){
+  document.getElementById('cfgUrl').value=localStorage.getItem('mw_url')||'';
+  document.getElementById('cfgAgent').value=localStorage.getItem('mw_agent')||'';
+}
+function getConfig(){return{url:localStorage.getItem('mw_url')||'',agent:localStorage.getItem('mw_agent')||''}}
+
+function clearSynced(){
+  dbAll().then(function(recs){
+    var s=recs.filter(function(r){return r.synced});
+    if(!s.length){toast('لا توجد زيارات مرفوعة للحذف');return}
+    Promise.all(s.map(function(r){return dbDel(r.id)}))
+      .then(function(){toast('✓ حُذفت '+s.length+' زيارة');refreshBadge()});
+  });
+}
+
+function copyCode(){
+  var code=document.getElementById('codeBox').textContent;
+  navigator.clipboard.writeText(code)
+    .then(function(){toast('✓ تم نسخ الكود')})
+    .catch(function(){toast('⚠ تعذر النسخ')});
+}
+
+/* ══════ PWA INSTALL ══════ */
+var deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById('installBanner').style.display='flex';
+});
+function doInstall(){
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(){
+    deferredPrompt=null;
+    document.getElementById('installBanner').style.display='none';
+  });
+}
+
+/* ══════ HELPERS ══════ */
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show')},2800);
+}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function escJs(s){return s.replace(/'/g,"\\'").replace(/"/g,'&quot;')}
+
+/* ══════ LOGIN & ADMIN LOCK ══════ */
+var ADMIN_PASS = 'mawasim2025'; // ← غيّر كلمة السر من هنا
+var logoTapCount = 0;
+var logoTapTimer = null;
+var isAdmin = false;
+
+function doLogin(){
+  var name = document.getElementById('loginName').value.trim();
+  if(!name || name.length < 2){
+    document.getElementById('loginError').textContent = 'يرجى إدخال اسمك الكامل';
+    return;
+  }
+  localStorage.setItem('mw_agent', name);
+  document.getElementById('loginScreen').style.display = 'none';
+  loadSettings();
+  toast('أهلاً ' + name + ' 👋');
+}
+
+function onLogoTap(){
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  if(logoTapCount >= 5){
+    logoTapCount = 0;
+    openAdminLock();
+    return;
+  }
+  logoTapTimer = setTimeout(function(){ logoTapCount = 0; }, 2000);
+}
+
+function openAdminLock(){
+  document.getElementById('adminLockOverlay').style.display = 'flex';
+  document.getElementById('adminPassInput').value = '';
+  document.getElementById('adminPassError').textContent = '';
+  setTimeout(function(){ document.getElementById('adminPassInput').focus(); }, 100);
+}
+
+function closeAdminLock(){
+  document.getElementById('adminLockOverlay').style.display = 'none';
+}
+
+function checkAdminPass(){
+  var entered = document.getElementById('adminPassInput').value;
+  if(entered === ADMIN_PASS){
+    isAdmin = true;
+    sessionStorage.setItem('mw_admin','1');
+    document.getElementById('tab-settings').style.display = '';
+    closeAdminLock();
+    goTab('settings');
+    toast('✓ مرحباً بك في لوحة الإدارة');
+  } else {
+    document.getElementById('adminPassError').textContent = 'كلمة السر غير صحيحة';
+    document.getElementById('adminPassInput').value = '';
+    document.getElementById('adminPassInput').focus();
+  }
+}
+
+function checkLoginState(){
+  var saved = localStorage.getItem('mw_agent');
+  if(saved && saved.length >= 2){
+    document.getElementById('loginScreen').style.display = 'none';
+  }
+  // إذا كان الأدمن سبق فتح الإعدادات في نفس الجلسة
+  if(sessionStorage.getItem('mw_admin') === '1'){
+    isAdmin = true;
+    document.getElementById('tab-settings').style.display = '';
+  }
+}
+
+/* ══════ BOOT ══════ */
+openDB().then(function(){
+  checkLoginState();
+  updateNet();
+  loadSettings();
+  refreshBadge();
+  onVisitTypeChange();
+}).catch(function(){toast('خطأ في قاعدة البيانات')});
+
+/* ══════ SERVICE WORKER (inline) ══════ */
+if('serviceWorker' in navigator){
+  var swCode='const C="mawasim-v3";self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(["./"])));self.skipWaiting()});self.addEventListener("activate",e=>{e.waitUntil(clients.claim())});self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})';
+  var swBlob=new Blob([swCode],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(function(){});
+}
+</script>
+</body>
+</html>
