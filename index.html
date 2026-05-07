@@ -120,6 +120,9 @@ textarea{resize:none;height:60px}
     <div class="tab active" onclick="goTab('Visit')" id="tabVisit">
       <span class="tab-icon">📋</span>تسجيل
     </div>
+    <div class="tab" onclick="goTab('Customers')" id="tabCustomers">
+      <span class="tab-icon">👥</span>عملائي
+    </div>
     <div class="tab" onclick="goTab('Queue')" id="tabQueue">
       <span class="tab-icon">☁️</span>الطابور <span id="qBadge"></span>
     </div>
@@ -238,6 +241,14 @@ textarea{resize:none;height:60px}
     <button class="btn" onclick="saveVisit()" id="saveBtn">💾 حفظ الزيارة</button>
   </div>
 
+  <div class="page" id="pageCustomers">
+    <div class="card" style="padding:10px">
+      <input type="text" id="custSearch" placeholder="🔍 ابحث باسم المحل أو المنطقة..." oninput="renderCustomers()" style="margin:0">
+    </div>
+    <div id="custCount" style="font-size:11px;color:#8A7250;text-align:center;margin-bottom:10px"></div>
+    <div id="customersList"></div>
+  </div>
+
   <div class="page" id="pageQueue">
     <div class="card">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
@@ -342,6 +353,16 @@ function out(o){
   </div>
 </div>
 
+<div id="custModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#2A1F0D;border:1px solid rgba(201,168,76,.3);border-radius:14px;padding:20px;max-width:340px;width:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700;color:#C9A84C">👤 تفاصيل العميل</div>
+      <span onclick="closeCustModal()" style="font-size:22px;color:#8A7250;cursor:pointer;line-height:1">×</span>
+    </div>
+    <div id="custModalBody"></div>
+  </div>
+</div>
+
 <div id="adminLock">
   <div class="lock-card">
     <div class="lock-title">🔒 صلاحية المدير</div>
@@ -417,6 +438,84 @@ function goTab(t){
   document.getElementById("tab"+t).classList.add("active");
   document.getElementById("page"+t).classList.add("active");
   if(t==="Queue")refreshQueue();
+  if(t==="Customers")renderCustomers();
+}
+
+function renderCustomers(){
+  var me=localStorage.getItem("mw_user")||"";
+  var search=(document.getElementById("custSearch").value||"").toLowerCase().trim();
+  dbAll().then(function(recs){
+    // فقط العملاء الجدد الذين سجّلهم المندوب الحالي
+    var myCustomers=[];
+    var seen={};
+    recs.forEach(function(r){
+      if(r.visitType!=="عميل جديد")return;
+      if(r.agent!==me)return;
+      var key=(r.shopName||"")+"|"+(r.area||"");
+      if(seen[key])return;
+      seen[key]=true;
+      myCustomers.push(r);
+    });
+
+    // فلترة بالبحث
+    if(search){
+      myCustomers=myCustomers.filter(function(c){
+        return (c.shopName||"").toLowerCase().indexOf(search)!==-1 ||
+               (c.area||"").toLowerCase().indexOf(search)!==-1 ||
+               (c.custOwner||"").toLowerCase().indexOf(search)!==-1;
+      });
+    }
+
+    document.getElementById("custCount").textContent=myCustomers.length+" عميل";
+    var list=document.getElementById("customersList");
+    if(!myCustomers.length){
+      list.innerHTML='<div style="text-align:center;padding:40px 20px;color:#8A7250"><div style="font-size:40px;opacity:.4;margin-bottom:10px">📭</div><div style="font-size:13px">لا يوجد عملاء حتى الآن<br><span style="font-size:11px;opacity:.7">سجّل عملاء جدد ليظهروا هنا</span></div></div>';
+      return;
+    }
+    list.innerHTML=myCustomers.map(function(c,i){
+      var phone=c.custPhone?'<div style="font-size:11px;color:#81C784;margin-top:3px">📞 '+esc(c.custPhone)+'</div>':'';
+      var cat=c.custCat?'<span style="display:inline-block;background:rgba(201,168,76,.1);color:#C9A84C;font-size:10px;padding:2px 8px;border-radius:8px;margin-top:5px">'+esc(c.custCat)+'</span>':'';
+      return '<div onclick="showCustDetail('+i+')" style="background:#2A1F0D;border:1px solid rgba(201,168,76,.15);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer">'+
+        '<div style="font-size:14px;font-weight:600;color:#F5EDD6">'+esc(c.shopName)+'</div>'+
+        '<div style="font-size:11px;color:#8A7250;margin-top:3px">📍 '+esc(c.gov||"")+' - '+esc(c.area||"")+'</div>'+
+        (c.custOwner?'<div style="font-size:11px;color:#8A7250;margin-top:3px">👤 '+esc(c.custOwner)+'</div>':'')+
+        phone+cat+
+      '</div>';
+    }).join("");
+    // خزّن المرجع للضغط
+    window._myCustomers=myCustomers;
+  });
+}
+
+function showCustDetail(i){
+  var c=window._myCustomers[i];
+  if(!c)return;
+  var phoneRow=c.custPhone?
+    '<a href="tel:'+esc(c.custPhone)+'" style="display:flex;align-items:center;gap:10px;background:rgba(76,175,80,.1);border:1px solid rgba(76,175,80,.3);border-radius:9px;padding:12px;text-decoration:none;color:#81C784;margin-bottom:8px"><span style="font-size:20px">📞</span><div><div style="font-size:11px;opacity:.8">اضغط للاتصال</div><div style="font-size:14px;font-weight:600;direction:ltr;text-align:left">'+esc(c.custPhone)+'</div></div></a>':
+    '';
+  var mapRow=c.gps?
+    '<a href="https://www.google.com/maps?q='+encodeURIComponent(c.gps)+'" target="_blank" style="display:flex;align-items:center;gap:10px;background:rgba(33,150,243,.1);border:1px solid rgba(33,150,243,.3);border-radius:9px;padding:12px;text-decoration:none;color:#64B5F6;margin-bottom:8px"><span style="font-size:20px">🗺️</span><div><div style="font-size:11px;opacity:.8">افتح الموقع على الخريطة</div><div style="font-size:13px;font-weight:600">'+esc(c.gps)+'</div></div></a>':
+    '';
+  var ownerRow=c.custOwner?
+    '<div style="display:flex;align-items:center;gap:10px;background:#1E1608;border:1px solid rgba(201,168,76,.15);border-radius:9px;padding:12px;margin-bottom:8px"><span style="font-size:20px">👤</span><div><div style="font-size:11px;color:#8A7250">صاحب المحل</div><div style="font-size:14px;font-weight:600">'+esc(c.custOwner)+'</div></div></div>':
+    '';
+  var catRow=c.custCat?
+    '<div style="display:flex;align-items:center;gap:10px;background:#1E1608;border:1px solid rgba(201,168,76,.15);border-radius:9px;padding:12px;margin-bottom:8px"><span style="font-size:20px">🏷️</span><div><div style="font-size:11px;color:#8A7250">التصنيف</div><div style="font-size:14px;font-weight:600">'+esc(c.custCat)+'</div></div></div>':
+    '';
+
+  document.getElementById("custModalBody").innerHTML=
+    '<div style="text-align:center;padding:14px;background:#1E1608;border-radius:10px;margin-bottom:14px">'+
+      '<div style="font-size:17px;font-weight:700;color:#C9A84C">'+esc(c.shopName)+'</div>'+
+      '<div style="font-size:12px;color:#8A7250;margin-top:4px">'+esc(c.gov||"")+' - '+esc(c.area||"")+'</div>'+
+    '</div>'+
+    ownerRow+phoneRow+mapRow+catRow+
+    '<div style="font-size:10px;color:#5A4A30;text-align:center;margin-top:10px">سُجّل في: '+esc(c.localTime||"")+'</div>';
+
+  document.getElementById("custModal").style.display="flex";
+}
+
+function closeCustModal(){
+  document.getElementById("custModal").style.display="none";
 }
 
 function doLogin(){
