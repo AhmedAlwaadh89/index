@@ -129,6 +129,9 @@ textarea{resize:none;height:60px}
     <div class="tab" onclick="goTab('Settings')" id="tabSettings" style="display:none">
       <span class="tab-icon">⚙️</span>الإعدادات
     </div>
+    <div class="tab" onclick="goTab('Admin')" id="tabAdmin" style="display:none">
+      <span class="tab-icon">📊</span>لوحة المدير
+    </div>
   </div>
 
   <div class="page active" id="pageVisit">
@@ -351,6 +354,45 @@ function out(o){
       <button class="btn btn-2" onclick="logout()" style="background:rgba(229,57,53,.1);color:#EF9A9A;border-color:rgba(229,57,53,.3)">🚪 تسجيل الخروج</button>
     </div>
   </div>
+
+  <div class="page" id="pageAdmin">
+    <div class="card" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:#C9A84C">📊 لوحة المدير — قراءة فقط</div>
+        <button onclick="loadAdminData()" style="background:rgba(201,168,76,.1);color:#C9A84C;border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:6px 12px;font-family:'Tajawal',sans-serif;font-size:11px;font-weight:600;cursor:pointer">🔄 تحديث</button>
+      </div>
+      <div id="adminStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">
+        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#C9A84C" id="adStTotal">0</div><div style="font-size:10px;color:#8A7250">زيارة</div></div>
+        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#81C784" id="adStAgents">0</div><div style="font-size:10px;color:#8A7250">مندوب</div></div>
+        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#64B5F6" id="adStCusts">0</div><div style="font-size:10px;color:#8A7250">عميل جديد</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <input type="text" id="adminSearch" placeholder="🔍 ابحث في كل البيانات..." oninput="renderAdminVisits()" style="margin-bottom:8px">
+      <div class="row2" style="margin-bottom:6px">
+        <select id="adminFilterAgent" onchange="renderAdminVisits()">
+          <option value="">كل المندوبين</option>
+        </select>
+        <select id="adminFilterGov" onchange="renderAdminVisits()">
+          <option value="">كل المحافظات</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="adminVisitCount" style="font-size:11px;color:#8A7250;text-align:center;margin-bottom:10px"></div>
+    <div id="adminVisitsList"></div>
+  </div>
+</div>
+
+<div id="visitDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:450;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+  <div style="background:#2A1F0D;border:1px solid rgba(201,168,76,.3);border-radius:14px;padding:18px;max-width:380px;width:100%;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:#C9A84C">📋 تفاصيل الزيارة</div>
+      <span onclick="closeVisitModal()" style="font-size:22px;color:#8A7250;cursor:pointer;line-height:1">×</span>
+    </div>
+    <div id="visitDetailBody"></div>
+  </div>
 </div>
 
 <div id="custModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;align-items:center;justify-content:center;padding:20px">
@@ -439,6 +481,7 @@ function goTab(t){
   document.getElementById("page"+t).classList.add("active");
   if(t==="Queue")refreshQueue();
   if(t==="Customers")renderCustomers();
+  if(t==="Admin")loadAdminData();
 }
 
 function renderCustomers(){
@@ -518,6 +561,121 @@ function closeCustModal(){
   document.getElementById("custModal").style.display="none";
 }
 
+var _adminVisits=[];
+
+function loadAdminData(){
+  var url=localStorage.getItem("mw_url");
+  if(!url){
+    document.getElementById("adminVisitsList").innerHTML='<div style="text-align:center;padding:30px;color:#EF9A9A">⚠ أدخل رابط Apps Script في الإعدادات أولاً</div>';
+    return;
+  }
+  if(!online){
+    document.getElementById("adminVisitsList").innerHTML='<div style="text-align:center;padding:30px;color:#FFCC80">⚠ يحتاج اتصال بالإنترنت لتحميل البيانات</div>';
+    return;
+  }
+  document.getElementById("adminVisitsList").innerHTML='<div style="text-align:center;padding:30px;color:#8A7250"><span class="spin">⏳</span> جاري التحميل...</div>';
+  fetch(url+"?action=all")
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success&&d.visits){
+        _adminVisits=d.visits;
+        // إحصائيات
+        document.getElementById("adStTotal").textContent=_adminVisits.length;
+        var agentSet={},custSet={};
+        _adminVisits.forEach(function(v){
+          if(v.agent)agentSet[v.agent]=true;
+          if(v.visitType==="عميل جديد")custSet[v.shopName+"|"+v.area]=true;
+        });
+        document.getElementById("adStAgents").textContent=Object.keys(agentSet).length;
+        document.getElementById("adStCusts").textContent=Object.keys(custSet).length;
+        // ملء الفلاتر
+        var agentSel=document.getElementById("adminFilterAgent");
+        var govSel=document.getElementById("adminFilterGov");
+        agentSel.innerHTML='<option value="">كل المندوبين</option>';
+        govSel.innerHTML='<option value="">كل المحافظات</option>';
+        Object.keys(agentSet).sort().forEach(function(a){
+          var o=document.createElement("option");o.value=a;o.textContent=a;agentSel.appendChild(o);
+        });
+        var govSet={};
+        _adminVisits.forEach(function(v){if(v.gov)govSet[v.gov]=true;});
+        Object.keys(govSet).sort().forEach(function(g){
+          var o=document.createElement("option");o.value=g;o.textContent=g;govSel.appendChild(o);
+        });
+        renderAdminVisits();
+      } else {
+        document.getElementById("adminVisitsList").innerHTML='<div style="text-align:center;padding:30px;color:#EF9A9A">✗ '+(d.error||"فشل التحميل")+'</div>';
+      }
+    })
+    .catch(function(err){
+      document.getElementById("adminVisitsList").innerHTML='<div style="text-align:center;padding:30px;color:#EF9A9A">✗ خطأ: '+err.message+'</div>';
+    });
+}
+
+function renderAdminVisits(){
+  var search=(document.getElementById("adminSearch").value||"").toLowerCase().trim();
+  var fAgent=document.getElementById("adminFilterAgent").value;
+  var fGov=document.getElementById("adminFilterGov").value;
+  var filtered=_adminVisits.filter(function(v){
+    if(fAgent&&v.agent!==fAgent)return false;
+    if(fGov&&v.gov!==fGov)return false;
+    if(search){
+      var hay=((v.shopName||"")+" "+(v.area||"")+" "+(v.owner||"")+" "+(v.phone||"")+" "+(v.notes||"")+" "+(v.agent||"")).toLowerCase();
+      if(hay.indexOf(search)===-1)return false;
+    }
+    return true;
+  });
+  document.getElementById("adminVisitCount").textContent="عرض "+filtered.length+" من "+_adminVisits.length+" زيارة";
+  var list=document.getElementById("adminVisitsList");
+  if(!filtered.length){
+    list.innerHTML='<div style="text-align:center;padding:30px;color:#8A7250">📭 لا نتائج</div>';
+    return;
+  }
+  list.innerHTML=filtered.slice(0,100).map(function(v,i){
+    var typeColor=v.visitType==="عميل جديد"?"#81C784":"#C9A84C";
+    var dt=v.localTime||(v.time?new Date(v.time).toLocaleString("ar-IQ"):"");
+    var thumb=v.photoUrl?'<img src="'+esc(v.photoUrl)+'" style="width:42px;height:42px;border-radius:6px;object-fit:cover;border:1px solid rgba(201,168,76,.2);flex-shrink:0" onerror="this.style.display=\'none\'">':'';
+    return '<div onclick="showVisitDetail('+i+')" style="background:#2A1F0D;border:1px solid rgba(201,168,76,.15);border-radius:9px;padding:10px;margin-bottom:7px;cursor:pointer;display:flex;gap:10px;align-items:center">'+
+      thumb+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:600;color:#F5EDD6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(v.shopName||"بدون اسم")+'</div>'+
+        '<div style="font-size:10px;color:#8A7250;margin-top:2px">'+esc(v.gov||"")+' - '+esc(v.area||"")+' | '+esc(v.agent||"")+'</div>'+
+        '<div style="font-size:10px;color:'+typeColor+';margin-top:2px">'+esc(v.visitType||"")+' • '+esc(dt)+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+  // مؤشر إلى البيانات المفلترة
+  window._filteredAdmin=filtered;
+}
+
+function showVisitDetail(i){
+  var v=window._filteredAdmin[i];
+  if(!v)return;
+  var photo=v.photoUrl?'<img src="'+esc(v.photoUrl)+'" style="width:100%;border-radius:9px;margin-bottom:12px;display:block" onerror="this.style.display=\'none\'">':'';
+  var rows=[
+    {k:"المندوب",v:v.agent,icon:"👤"},
+    {k:"اسم المحل",v:v.shopName,icon:"🏪"},
+    {k:"الموقع",v:(v.gov||"")+" - "+(v.area||""),icon:"📍"},
+    {k:"نوع الزيارة",v:v.visitType,icon:"📊"},
+    {k:"حالة البضاعة",v:v.status,icon:"📦"},
+    {k:"صاحب المحل",v:v.owner,icon:"👨‍💼"},
+    {k:"التصنيف",v:v.category,icon:"🏷️"},
+    {k:"العميل المرتبط",v:v.linkedCust,icon:"🔗"},
+    {k:"ملاحظات",v:v.notes,icon:"📝"},
+    {k:"وقت الزيارة",v:v.localTime,icon:"🕐"}
+  ];
+  var rowsHtml=rows.filter(function(r){return r.v;}).map(function(r){
+    return '<div style="display:flex;gap:10px;padding:9px 11px;background:#1E1608;border-radius:7px;margin-bottom:6px"><span style="font-size:15px">'+r.icon+'</span><div style="flex:1"><div style="font-size:10px;color:#8A7250">'+r.k+'</div><div style="font-size:13px;color:#F5EDD6;margin-top:2px">'+esc(r.v)+'</div></div></div>';
+  }).join("");
+  var phoneBtn=v.phone?'<a href="tel:'+esc(v.phone)+'" style="display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(76,175,80,.1);border:1px solid rgba(76,175,80,.3);border-radius:7px;padding:11px;text-decoration:none;color:#81C784;margin-bottom:6px;font-weight:600;font-size:13px">📞 '+esc(v.phone)+'</a>':'';
+  var mapBtn=v.gps?'<a href="https://www.google.com/maps?q='+encodeURIComponent(v.gps)+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(33,150,243,.1);border:1px solid rgba(33,150,243,.3);border-radius:7px;padding:11px;text-decoration:none;color:#64B5F6;margin-bottom:6px;font-weight:600;font-size:13px">🗺️ افتح الموقع على الخريطة</a>':'';
+  document.getElementById("visitDetailBody").innerHTML=photo+rowsHtml+phoneBtn+mapBtn;
+  document.getElementById("visitDetailModal").style.display="flex";
+}
+
+function closeVisitModal(){
+  document.getElementById("visitDetailModal").style.display="none";
+}
+
 function doLogin(){
   var name=document.getElementById("loginInput").value.trim();
   if(name.length<2){
@@ -555,8 +713,9 @@ function checkAdmin(){
   if(p===ADMIN_PASS){
     sessionStorage.setItem("mw_admin","1");
     document.getElementById("tabSettings").style.display="block";
+    document.getElementById("tabAdmin").style.display="block";
     closeLock();
-    goTab("Settings");
+    goTab("Admin");
     toast("مرحباً بك");
   } else {
     document.getElementById("adminErr").textContent="كلمة السر خاطئة";
@@ -830,6 +989,7 @@ openDB().then(function(){
   }
   if(sessionStorage.getItem("mw_admin")==="1"){
     document.getElementById("tabSettings").style.display="block";
+    document.getElementById("tabAdmin").style.display="block";
   }
   document.getElementById("cfgUrl").value=localStorage.getItem("mw_url")||"";
   toggleCustomer();
