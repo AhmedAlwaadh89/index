@@ -423,6 +423,7 @@ function out(o){
 
 <script>
 var ADMIN_PASS="mawasim2025";
+var SUPER_PASS="super2025";
 var DB=null;
 var photoData=null;
 var photoGPS=null;
@@ -711,13 +712,20 @@ function logoTap(){
 
 function checkAdmin(){
   var p=document.getElementById("adminPwd").value;
-  if(p===ADMIN_PASS){
-    sessionStorage.setItem("mw_admin","1");
+  if(p===SUPER_PASS){
+    sessionStorage.setItem("mw_admin","super");
     document.getElementById("tabSettings").style.display="block";
     document.getElementById("tabAdmin").style.display="block";
     closeLock();
     goTab("Admin");
-    toast("مرحباً بك");
+    toast("👑 مرحباً سوبر أدمن");
+  } else if(p===ADMIN_PASS){
+    sessionStorage.setItem("mw_admin","admin");
+    document.getElementById("tabSettings").style.display="none";
+    document.getElementById("tabAdmin").style.display="block";
+    closeLock();
+    goTab("Admin");
+    toast("📊 مرحباً بك يا مدير");
   } else {
     document.getElementById("adminErr").textContent="كلمة السر خاطئة";
   }
