@@ -265,6 +265,35 @@ textarea{resize:none;height:60px}
     <div id="queueList"></div>
   </div>
 
+  <div class="page" id="pageAdmin">
+    <div class="card" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:#C9A84C">📊 لوحة المدير — قراءة فقط</div>
+        <button onclick="loadAdminData()" style="background:rgba(201,168,76,.1);color:#C9A84C;border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:6px 12px;font-family:'Tajawal',sans-serif;font-size:11px;font-weight:600;cursor:pointer">🔄 تحديث</button>
+      </div>
+      <div id="adminStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">
+        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#C9A84C" id="adStTotal">0</div><div style="font-size:10px;color:#8A7250">زيارة</div></div>
+        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#81C784" id="adStAgents">0</div><div style="font-size:10px;color:#8A7250">مندوب</div></div>
+        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#64B5F6" id="adStCusts">0</div><div style="font-size:10px;color:#8A7250">عميل جديد</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <input type="text" id="adminSearch" placeholder="🔍 ابحث في كل البيانات..." oninput="renderAdminVisits()" style="margin-bottom:8px">
+      <div class="row2" style="margin-bottom:6px">
+        <select id="adminFilterAgent" onchange="renderAdminVisits()">
+          <option value="">كل المندوبين</option>
+        </select>
+        <select id="adminFilterGov" onchange="renderAdminVisits()">
+          <option value="">كل المحافظات</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="adminVisitCount" style="font-size:11px;color:#8A7250;text-align:center;margin-bottom:10px"></div>
+    <div id="adminVisitsList"></div>
+  </div>
+
   <div class="page" id="pageSettings">
     <div class="card">
       <div class="card-title">🔗 ربط Google Sheets</div>
@@ -355,35 +384,7 @@ function out(o){
     </div>
   </div>
 
-  <div class="page" id="pageAdmin">
-    <div class="card" style="padding:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:700;color:#C9A84C">📊 لوحة المدير — قراءة فقط</div>
-        <button onclick="loadAdminData()" style="background:rgba(201,168,76,.1);color:#C9A84C;border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:6px 12px;font-family:'Tajawal',sans-serif;font-size:11px;font-weight:600;cursor:pointer">🔄 تحديث</button>
-      </div>
-      <div id="adminStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">
-        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#C9A84C" id="adStTotal">0</div><div style="font-size:10px;color:#8A7250">زيارة</div></div>
-        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#81C784" id="adStAgents">0</div><div style="font-size:10px;color:#8A7250">مندوب</div></div>
-        <div style="background:#1E1608;border-radius:7px;padding:8px"><div style="font-size:20px;font-weight:700;color:#64B5F6" id="adStCusts">0</div><div style="font-size:10px;color:#8A7250">عميل جديد</div></div>
-      </div>
-    </div>
-
-    <div class="card" style="padding:10px">
-      <input type="text" id="adminSearch" placeholder="🔍 ابحث في كل البيانات..." oninput="renderAdminVisits()" style="margin-bottom:8px">
-      <div class="row2" style="margin-bottom:6px">
-        <select id="adminFilterAgent" onchange="renderAdminVisits()">
-          <option value="">كل المندوبين</option>
-        </select>
-        <select id="adminFilterGov" onchange="renderAdminVisits()">
-          <option value="">كل المحافظات</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="adminVisitCount" style="font-size:11px;color:#8A7250;text-align:center;margin-bottom:10px"></div>
-    <div id="adminVisitsList"></div>
   </div>
-</div>
 
 <div id="visitDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:450;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
   <div style="background:#2A1F0D;border:1px solid rgba(201,168,76,.3);border-radius:14px;padding:18px;max-width:380px;width:100%;max-height:90vh;overflow-y:auto">
